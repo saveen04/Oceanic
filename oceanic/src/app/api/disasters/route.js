@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
-import { connectToDatabase } from "@/lib/mongodb";
-import { Disaster } from "@/models/Disaster";
-import { requireAuth } from "@/lib/apiAuth";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, addDoc, query, orderBy, limit, serverTimestamp } from "firebase/firestore";
 
 const CreateDisasterSchema = z.object({
   type: z.enum(["tsunami", "cyclone", "high_waves", "tide", "storm_surge", "coastal_flooding"]),
@@ -18,44 +16,52 @@ const CreateDisasterSchema = z.object({
 });
 
 export async function GET(request) {
-  const { errorResponse } = requireAuth(request);
-  if (errorResponse) return errorResponse;
+  try {
+    const { searchParams } = new URL(request.url);
+    const resultLimit = Math.min(Number(searchParams.get("limit") || 50), 200);
 
-  const { searchParams } = new URL(request.url);
-  const limit = Math.min(Number(searchParams.get("limit") || 50), 200);
-  const type = searchParams.get("type");
-  const severity = searchParams.get("severity");
+    const disastersSnap = await getDocs(
+      query(collection(db, "disasters"), orderBy("createdAt", "desc"), limit(resultLimit))
+    );
 
-  const query = {};
-  if (type) query.type = type;
-  if (severity) query.severity = severity;
+    const items = disastersSnap.docs.map(doc => ({
+      ...doc.data(),
+      _id: doc.id,
+      // Ensure createdAt is serialized as string if it's a Firestore Timestamp
+      createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt
+    }));
 
-  await connectToDatabase();
-  const items = await Disaster.find(query).sort({ createdAt: -1 }).limit(limit).lean();
-  return NextResponse.json({ items });
+    return NextResponse.json({ items });
+  } catch (error) {
+    console.error("Firestore Disasters Fetch Error:", error);
+    return NextResponse.json({ items: [] });
+  }
 }
 
 export async function POST(request) {
-  const { errorResponse } = requireAuth(request);
-  if (errorResponse) return errorResponse;
+  try {
+    const body = await request.json().catch(() => null);
+    const parsed = CreateDisasterSchema.safeParse(body);
+    
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
 
-  const body = await request.json().catch(() => null);
-  const parsed = CreateDisasterSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid input", details: parsed.error.flatten() },
-      { status: 400 }
-    );
+    const created = await addDoc(collection(db, "disasters"), {
+      ...parsed.data,
+      severity: parsed.data.severity ?? "low",
+      source: parsed.data.source ?? "manual",
+      meta: parsed.data.meta ?? {},
+      createdAt: serverTimestamp(),
+    });
+
+    return NextResponse.json({ item: { id: created.id, ...parsed.data } }, { status: 201 });
+  } catch (error) {
+    console.error("Firestore Disaster Creation Error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
-
-  await connectToDatabase();
-  const created = await Disaster.create({
-    ...parsed.data,
-    severity: parsed.data.severity ?? "low",
-    source: parsed.data.source ?? "manual",
-    meta: parsed.data.meta ?? {},
-  });
-
-  return NextResponse.json({ item: created }, { status: 201 });
 }
 

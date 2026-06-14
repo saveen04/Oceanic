@@ -1,9 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
-import { Providers } from "@/components/Providers";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
+import { ClientProviders } from "@/components/ClientProviders";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,15 +22,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-[#0a1016]`}
+        suppressHydrationWarning
       >
-        <Providers>
-          <Navbar />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Footer />
-        </Providers>
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

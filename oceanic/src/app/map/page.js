@@ -1,28 +1,39 @@
 "use client";
 
-import { Map } from "lucide-react";
-
-import { MapExperience } from "@/components/map/MapExperience";
+import React from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import OceanMap from "@/components/map/OceanMap";
+import { 
+  Layers, 
+  Map as MapIcon, 
+  Satellite, 
+  ShieldAlert, 
+  Activity,
+  Wind,
+  Maximize2,
+  Navigation
+} from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function MapPage() {
   return (
-    <main className="relative">
-      <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
-            <Map size={18} />
-          </div>
+    <DashboardLayout>
+      <div className="max-w-[1600px] mx-auto space-y-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white">Ocean OSF map</h1>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-              Open‑Meteo hourly JSON → interactive layers + timeline animation + heatmaps.
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Interactive Intelligence Map</h1>
+            <p className="text-slate-400 font-medium">Real-time GIS visualization of global ocean conditions.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-4 py-1.5 glass-dark border border-white/5 rounded-xl text-xs font-bold text-ocean-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-ocean-400 animate-pulse" />
+              Live GIS Feed Active
+            </div>
           </div>
         </div>
-      </div>
 
-      <MapExperience />
-    </main>
+        <OceanMap />
+      </div>
+    </DashboardLayout>
   );
 }
-

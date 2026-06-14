@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Search, MapPin, Star, Waves, Bot, Sparkles, Navigation, Hotel, Loader2 } from "lucide-react";
+import Script from "next/script";
 
 const COASTAL_HOTELS = [
   { id: 1, name: "Taj Exotica Resort & Spa", location: "Goa", region: "West Coast", price: "₹25,000", rating: 4.9, image: "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=800&q=80" },
@@ -89,7 +90,7 @@ export default function CoastalHotelsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <script src="https://checkout.razorpay.com/v1/checkout.js" async />
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       
       <main className="mx-auto max-w-7xl px-4 py-12">
         <div className="mb-16 grid gap-8 lg:grid-cols-12">

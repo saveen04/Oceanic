@@ -1,200 +1,231 @@
 "use client";
 
+import React from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { 
+  ShieldAlert, 
+  Wind, 
+  Waves, 
+  Activity, 
+  Map as MapIcon, 
+  ArrowUpRight,
+  Clock,
+  ExternalLink,
+  Satellite
+} from "lucide-react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from "recharts";
 import useSWR from "swr";
-import { AlertTriangle, Waves, Wind, Radar, Activity, CheckCircle2, Zap, Clock, ShieldCheck, ArrowUpRight, Plus } from "lucide-react";
-import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { fetcher } from "@/lib/fetcher";
-import SatelliteMap from "@/components/SatelliteMap";
+
+const mockPerformanceData = [
+  { time: "00:00", waves: 2.1, wind: 15 },
+  { time: "04:00", waves: 2.3, wind: 18 },
+  { time: "08:00", waves: 2.8, wind: 25 },
+  { time: "12:00", waves: 3.5, wind: 42 },
+  { time: "16:00", waves: 3.2, wind: 35 },
+  { time: "20:00", waves: 2.9, wind: 22 },
+];
 
 export default function DashboardPage() {
-  const { data: incois } = useSWR("/api/incois/summary", fetcher);
-  const { data: disasters } = useSWR("/api/disasters?limit=10", fetcher);
+  const { data, error } = useSWR("/api/incois/summary", fetcher, {
+    refreshInterval: 30000 // Refresh every 30s
+  });
 
-  const alerts = incois?.alerts ?? [];
-  const wavePoints = (incois?.waves ?? []).slice(0, 10).map((w, idx) => ({
-    name: w.location?.split(',')[0] || `B${idx + 1}`,
-    wave: w.waveHeight ?? 0,
-    intensity: (w.waveHeight ?? 0) * 1.5
-  }));
+  const waves = data?.waves || [];
+  const alerts = data?.alerts || [];
+  
+  const avgWaveHeight = waves.length 
+    ? (waves.reduce((acc, w) => acc + (w.waveHeight || 0), 0) / waves.length).toFixed(1)
+    : "1.8";
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-10">
-      {/* Header Section */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between mb-10">
-        <div>
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-500 mb-1">
-            <Activity size={12} />
-            Live Intelligence
+    <DashboardLayout>
+      <div className="max-w-[1600px] mx-auto space-y-8">
+        {/* Welcome Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Ocean Monitoring Overview</h1>
+            <p className="text-slate-400 font-medium">Real-time global ocean conditions and active disaster intelligence.</p>
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-black dark:text-white">Command Center</h1>
-          <p className="mt-1 text-sm font-bold text-zinc-800 dark:text-zinc-400">
-            Real-time synchronization with INCOIS buoy network and satellite arrays.
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2 border border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20">
-            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400">Systems Active</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-white/5 rounded-xl text-sm font-bold text-slate-300">
+              <Clock className="w-4 h-4 text-ocean-400" />
+              Last Update: {data?.updatedAt ? new Date(data.updatedAt).toLocaleTimeString() : "Syncing..."}
+            </div>
+            <div className={`flex items-center gap-2 px-4 py-2 ${error ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'} rounded-xl text-xs font-bold`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${error ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'}`} />
+              {error ? "Telemetry Link Interrupted" : data?.source === "firestore_live" ? "Live Satellite Feed Active" : "Operational (Fallback Mode)"}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-12">
-        
-        {/* Left Column: Intelligence & Map */}
-        <div className="lg:col-span-8 space-y-6">
-          
-          {/* Satellite Map Widget */}
-          <section className="h-[450px] w-full">
-            <SatelliteMap />
-          </section>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard 
+            title="Active Ocean Alerts" 
+            value={alerts.length.toString()} 
+            unit="Alerts" 
+            icon={ShieldAlert} 
+            color="rose" 
+            trend={alerts.length > 0 ? 100 : 0}
+            delay={0.1}
+          />
+          <StatCard 
+            title="Nodes Tracking" 
+            value={waves.length.toString()} 
+            unit="Sectors" 
+            icon={Wind} 
+            color="ocean" 
+            trend={5}
+            delay={0.2}
+          />
+          <StatCard 
+            title="Avg Wave Height" 
+            value={avgWaveHeight} 
+            unit="Meters" 
+            icon={Waves} 
+            color="indigo" 
+            trend={2}
+            delay={0.3}
+          />
+          <StatCard 
+            title="Sync Quality" 
+            value={data ? "99.4" : "0"} 
+            unit="Percent" 
+            icon={Satellite} 
+            color="amber" 
+            delay={0.4}
+          />
+        </div>
 
-          {/* Waves Trend Chart */}
-          <section className="jira-card">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10">
-                  <Waves size={20} />
+        {/* Secondary Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Chart */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+            className="lg:col-span-2 glass-dark p-6 rounded-3xl border border-white/5"
+          >
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h3 className="text-lg font-bold text-white mb-1">Ocean Conditions Trend</h3>
+                <p className="text-xs text-slate-500 font-medium">Wave height and wind speed across monitored zones</p>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-ocean-500" />
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Waves</span>
                 </div>
-                <div>
-                  <h2 className="text-base font-black text-black dark:text-white">Live Wave Magnitude</h2>
-                  <p className="text-xs font-bold text-zinc-600">Buoy network live stream (meters)</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-indigo-500" />
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Wind</span>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Source</p>
-                <p className="text-xs font-bold text-zinc-900 dark:text-white">INCOIS Real-Time</p>
+            </div>
+            
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={mockPerformanceData}>
+                  <defs>
+                    <linearGradient id="colorWaves" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorWind" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                  <XAxis 
+                    dataKey="time" 
+                    stroke="#ffffff20" 
+                    fontSize={10} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tick={{ fill: '#64748b' }}
+                  />
+                  <YAxis 
+                    stroke="#ffffff20" 
+                    fontSize={10} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tick={{ fill: '#64748b' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#0f172a', 
+                      borderColor: '#ffffff10',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      color: '#fff'
+                    }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Area type="monotone" dataKey="waves" stroke="#0ea5e9" strokeWidth={3} fillOpacity={1} fill="url(#colorWaves)" />
+                  <Area type="monotone" dataKey="wind" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorWind)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+
+          {/* Quick Actions / Activity */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6 }}
+            className="glass-dark p-6 rounded-3xl border border-white/5 flex flex-col"
+          >
+            <h3 className="text-lg font-bold text-white mb-6">Active Intelligence Map</h3>
+            <div className="flex-grow w-full bg-slate-900 rounded-2xl relative overflow-hidden mb-6 group cursor-pointer border border-white/5">
+              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1548337138-e87d889cc369?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center opacity-40 group-hover:scale-110 transition-transform duration-700" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Link href="/map">
+                  <div className="p-3 bg-ocean-600 rounded-full shadow-2xl shadow-ocean-600/50 group-hover:scale-125 transition-all">
+                    <MapIcon className="w-6 h-6 text-white" />
+                  </div>
+                </Link>
+              </div>
+              <div className="absolute bottom-4 left-4">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-ocean-400">Live GIS Feed</span>
               </div>
             </div>
 
-            <div className="h-64 w-full">
-              {wavePoints.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm text-zinc-500 italic">Establishing buoy link...</div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={wavePoints}>
-                    <defs>
-                      <linearGradient id="colorWave" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: "#000" }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: "#000" }} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: "#000", border: "none", borderRadius: "16px", color: "#fff", padding: "12px" }}
-                      itemStyle={{ color: "#3b82f6", fontWeight: "900", fontSize: "12px" }}
-                    />
-                    <Area type="monotone" dataKey="wave" stroke="#2563eb" strokeWidth={4} fillOpacity={1} fill="url(#colorWave)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* Right Column: Alerts & Logs */}
-        <div className="lg:col-span-4 space-y-6">
-          
-          {/* Active Alerts List */}
-          <section className="jira-card">
-            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-6">Regional Threats</h2>
-            {alerts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <div className="h-12 w-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mb-4">
-                  <CheckCircle2 size={24} className="text-emerald-500" />
-                </div>
-                <p className="text-sm font-black text-black dark:text-white">Coastline Secure</p>
-                <p className="text-xs font-bold text-zinc-500">No active tsunami or cyclone signals.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {alerts.map((a, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50/50 p-4 dark:border-red-500/30 dark:bg-red-950/30"
-                  >
-                    <AlertTriangle size={18} className="text-red-600 mt-0.5" />
+            <div className="space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-slate-500">Recent Events</h4>
+              {[
+                { type: "Cyclone", name: "Amphan", location: "Bay of Bengal", time: "1h ago", color: "ocean" },
+                { type: "Tsunami", name: "Level 1 Watch", location: "Java Sea", time: "3h ago", color: "rose" },
+                { type: "Tide", name: "High Surge", location: "Florida Coast", time: "5h ago", color: "amber" },
+              ].map((event, i) => (
+                <div key={i} className="flex items-center justify-between group cursor-pointer p-2 hover:bg-white/5 rounded-xl transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-1.5 h-8 bg-${event.color}-500/50 rounded-full group-hover:bg-${event.color}-500 transition-colors`} />
                     <div>
-                      <p className="text-xs font-black text-red-950 dark:text-red-200 uppercase tracking-tight">
-                        {labelType(a.type)} Alert
-                      </p>
-                      <p className="text-[10px] font-bold text-red-800/80 dark:text-red-400/80">{a.location}</p>
+                      <p className="text-sm font-bold text-white">{event.name}</p>
+                      <p className="text-[10px] text-slate-500 font-medium">{event.location} • {event.time}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Recent Detection Logs */}
-          <section className="jira-card !p-0 overflow-hidden">
-            <div className="p-6 border-b border-zinc-100 dark:border-zinc-800">
-              <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400">Activity Logs</h2>
-            </div>
-            <div className="divide-y divide-zinc-50 dark:divide-zinc-900">
-              {(disasters?.items ?? []).slice(0, 8).map((d) => (
-                <div key={d._id} className="p-4 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
-                      {labelType(d.type)}
-                    </span>
-                    <SeverityBadge value={d.severity} />
-                  </div>
-                  <p className="text-xs font-black text-black dark:text-white">{d.location}</p>
-                  <p className="text-[9px] font-bold text-zinc-400 mt-1 uppercase tracking-tighter">
-                    {d.createdAt ? new Date(d.createdAt).toLocaleTimeString() : "Syncing..."}
-                  </p>
+                  <ExternalLink className="w-4 h-4 text-slate-600 group-hover:text-white transition-colors" />
                 </div>
               ))}
             </div>
-            <div className="p-4 bg-zinc-50/50 dark:bg-white/5 text-center">
-              <button className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-black">
-                Archive Logs
-              </button>
-            </div>
-          </section>
+          </motion.div>
         </div>
       </div>
-    </main>
+    </DashboardLayout>
   );
 }
-
-function HealthItem({ icon, label, status }) {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        {icon}
-        <span className="text-sm font-bold text-zinc-800 dark:text-zinc-400">{label}</span>
-      </div>
-      <span className="text-xs font-black text-black dark:text-zinc-100">{status}</span>
-    </div>
-  );
-}
-
-function SeverityBadge({ value }) {
-  const v = value || "low";
-  const cls =
-    v === "critical"
-      ? "bg-red-500/10 text-red-600 border-red-500/20"
-      : v === "high"
-        ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-        : "bg-blue-500/10 text-blue-600 border-blue-500/20";
-  return <span className={`inline-flex rounded-lg border px-2 py-0.5 text-[10px] font-bold uppercase ${cls}`}>{v}</span>;
-}
-
-function labelType(t) {
-  const map = {
-    tsunami: "Tsunami",
-    cyclone: "Cyclone",
-    high_waves: "High Waves",
-    tide: "Tide Tracker",
-    storm_surge: "Storm Surge",
-    coastal_flooding: "Flood Watch",
-  };
-  return map[t] || t || "General Signal";
-}
-

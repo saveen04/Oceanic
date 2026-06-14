@@ -8,7 +8,7 @@ export function loadOceanCsv() {
 
   const absPath = path.isAbsolute(csvPath)
     ? csvPath
-    : path.join(process.cwd(), csvPath);
+    : path.join(/*turbopackIgnore: true*/ process.cwd(), csvPath);
 
   if (!fs.existsSync(absPath)) {
     throw new Error(`CSV dataset not found at ${absPath}`);

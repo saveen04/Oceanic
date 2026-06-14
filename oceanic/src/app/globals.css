@@ -1,197 +1,82 @@
 @import "tailwindcss";
 
-/* 
-  OCEANIC PLATFORM - CORE DESIGN SYSTEM
-  Professional, High-Contrast, Motion-Forward
-*/
+@theme {
+  --color-ocean-50: #f0f9ff;
+  --color-ocean-100: #e0f2fe;
+  --color-ocean-200: #bae6fd;
+  --color-ocean-300: #7dd3fc;
+  --color-ocean-400: #38bdf8;
+  --color-ocean-500: #0ea5e9;
+  --color-ocean-600: #0284c7;
+  --color-ocean-700: #0369a1;
+  --color-ocean-800: #075985;
+  --color-ocean-900: #0c4a6e;
+  --color-ocean-950: #020617;
+
+  --color-rose-premium: #fb7185;
+  --color-emerald-premium: #34d399;
+  --color-cyan-premium: #22d3ee;
+
+  --animate-wave: wave 10s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  
+  @keyframes wave {
+    0%, 100% { transform: translateY(0) scaleY(1); }
+    50% { transform: translateY(-20px) scaleY(1.05); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+}
 
 :root {
-  --background: #ffffff;
-  --foreground: #000000;
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 2, 6, 23;
+  --background-end-rgb: 15, 23, 42;
   
-  --card: #ffffff;
-  --card-foreground: #000000;
-  
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
-  
-  --secondary: #f4f4f5;
-  --secondary-foreground: #000000;
-  
-  --muted: #f4f4f5;
-  --muted-foreground: #3f3f46; /* Darker zinc-700 for better visibility */
-  
-  --accent: #eff6ff;
-  --accent-foreground: #1e40af;
-  
-  --border: #d4d4d8; /* Darker zinc-300 */
-  --input: #d4d4d8;
-  --ring: #3b82f6;
-  
-  --radius: 0.75rem;
-}
-
-.dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  
-  --card: #09090b;
-  --card-foreground: #fafafa;
-  
-  --primary: #3b82f6;
-  --primary-foreground: #09090b;
-  
-  --secondary: #18181b;
-  --secondary-foreground: #fafafa;
-  
-  --muted: #18181b;
-  --muted-foreground: #a1a1aa;
-  
-  --accent: #1e293b;
-  --accent-foreground: #3b82f6;
-  
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #1d4ed8;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-
-  /* Animation Overrides */
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
-  --animate-fade-in: fade-in 0.5s ease-out;
-  --animate-slide-up: slide-up 0.4s ease-out;
-}
-
-/* -------------------------------------------------------------------------- */
-/* BASE STYLES                                                                */
-/* -------------------------------------------------------------------------- */
-
-* {
-  border-color: var(--border);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-html {
-  scroll-behavior: smooth;
-  -webkit-tap-highlight-color: transparent;
+  --primary: #0ea5e9;
+  --secondary: #6366f1;
+  --accent: #f43f5e;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-feature-settings: "rlig" 1, "calt" 1;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  color: rgb(255, 255, 255);
+  background: #020617;
+  font-family: var(--font-geist-sans), Inter, sans-serif;
+  overflow-x: hidden;
 }
 
-::selection {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
+.glass-premium {
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 4px 32px 0 rgba(0, 0, 0, 0.37),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-/* -------------------------------------------------------------------------- */
-/* PREMIUM MOTION & ANIMATIONS                                                */
-/* -------------------------------------------------------------------------- */
-
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+.glass-dark {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.mesh-gradient {
+  background-color: #020617;
+  background-image:
+    radial-gradient(at 0% 0%, hsla(199,91%,36%,0.2) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(220,100%,46%,0.2) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, hsla(234,48%,25%,0.1) 0px, transparent 80%);
 }
 
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 15px -3px rgba(59, 130, 246, 0.1); }
-  50% { box-shadow: 0 0 25px -3px rgba(59, 130, 246, 0.25); }
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-
-@keyframes shimmer {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(100%); }
-}
-
-.animate-slide-up { animation: slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-glow-pulse { animation: glow-pulse 3s infinite ease-in-out; }
-
-/* -------------------------------------------------------------------------- */
-/* COMPONENT UTILITIES                                                        */
-/* -------------------------------------------------------------------------- */
-
-/* Jira-Style Professional Cards */
-.jira-card {
-  @apply relative overflow-hidden rounded-xl border border-zinc-200 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-300;
-}
-
-.jira-card:hover {
-  @apply -translate-y-0.5 border-zinc-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:border-zinc-700;
-}
-
-.dark .jira-card {
-  @apply border-zinc-800 bg-zinc-950 shadow-none;
-}
-
-/* High-Fidelity Glow Cards */
-.glow-card {
-  @apply relative rounded-2xl border border-zinc-200 bg-white p-8 transition-all duration-500 hover:border-blue-500/30 dark:border-zinc-800 dark:bg-zinc-950;
-}
-
-.glow-card::before {
-  content: "";
-  @apply absolute inset-0 -z-10 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 transition-opacity duration-500;
-}
-
-.glow-card:hover {
-  @apply -translate-y-1 shadow-[0_20px_40px_-20px_rgba(37,99,235,0.15)];
-}
-
-.glow-card:hover::before {
-  @apply opacity-100;
-}
-
-.dark .glow-card:hover {
-  @apply border-blue-500/40 shadow-[0_20px_40px_-20px_rgba(59,130,246,0.3)];
-}
-
-/* Professional Buttons */
-.jira-button-primary {
-  @apply relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-700 active:scale-[0.97];
-}
-
-.jira-button-secondary {
-  @apply inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-sm font-bold text-zinc-950 transition-all hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.97];
-}
-
-/* -------------------------------------------------------------------------- */
-/* VISIBILITY & CONTRAST                                                      */
-/* -------------------------------------------------------------------------- */
-
-.text-high-contrast {
-  @apply text-black dark:text-white transition-colors duration-200;
-}
-
-.text-muted-contrast {
-  @apply text-zinc-900 dark:text-zinc-400 transition-colors duration-200;
-}
-
-/* Form Accessibility */
-input, textarea, select {
-  @apply bg-white text-black transition-all focus:ring-2 focus:ring-blue-500/20 dark:bg-zinc-900 dark:text-white;
-}
-
-/* Glassmorphism Effect */
-.glass-panel {
-  @apply border border-white/10 bg-white/5 backdrop-blur-md dark:bg-black/20;
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

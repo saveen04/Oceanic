@@ -17,3 +17,6 @@ export function getAuthFromRequest(request) {
   }
 }
 
+// Re-export verifyJwt as verifyToken for legacy API route compatibility
+export { verifyJwt as verifyToken };
+
