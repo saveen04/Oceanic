@@ -44,8 +44,15 @@
 body {
   color: rgb(255, 255, 255);
   background: #020617;
-  font-family: var(--font-geist-sans), Inter, sans-serif;
+  font-family: 'Outfit', 'Inter', 'Avenir Next', sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-operational {
+  font-family: 'Avenir Next', 'Outfit', sans-serif;
+  font-weight: 100;
+  letter-spacing: -0.05em;
 }
 
 .glass-premium {

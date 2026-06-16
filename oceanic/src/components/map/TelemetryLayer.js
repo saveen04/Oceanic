@@ -33,48 +33,47 @@ export function TelemetryLayer({ data, type, visible = true, opacity = 1 }) {
             {/* Inner Indicator Core */}
             <Circle
               center={[point.lat || 0, point.lng || 0]}
-              radius={20000}
+              radius={25000}
               pathOptions={{
-                color: "white",
-                fillColor: color,
-                fillOpacity: 0.8 * opacity,
-                weight: 2
+                fillColor: "#4C9AFF",
+                fillOpacity: 1,
+                color: "#ffffff",
+                weight: 2,
               }}
             >
-              <Tooltip direction="top" offset={[0, -10]} opacity={1}>
-                <div className="bg-[#0a1016] text-white p-2 rounded-lg border border-white/10 shadow-2xl">
-                  <div className="text-[10px] font-black uppercase text-white/40 mb-1">{point.location || "Ocean Node"}</div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-[8px] uppercase text-white/30">Wave</span>
-                      <span className="text-xs font-bold text-ocean-400">{point.waveHeight || "0.0"}m</span>
-                    </div>
-                    <div className="w-px h-6 bg-white/10" />
-                    <div className="flex flex-col">
-                      <span className="text-[8px] uppercase text-white/30">Temp</span>
-                      <span className="text-xs font-bold text-amber-400">{point.temp || "28.1"}°C</span>
-                    </div>
-                  </div>
-                </div>
-              </Tooltip>
-
               <Popup>
-                <div className="p-4 bg-[#0a1016] text-white border border-white/10 rounded-2xl min-w-[200px]">
-                  <h4 className="text-sm font-black uppercase tracking-tight mb-2 flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${isWarning ? 'bg-rose-500 animate-pulse' : 'bg-ocean-500'}`} />
-                    Station: {point.location}
-                  </h4>
-                  <p className="text-[10px] text-white/40 mb-4 font-medium italic">
-                    Real-time satellite link via ODS-{point.id || 'SYNC'}. All sensors reporting nominal telemetry.
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-center">
-                      <div className="text-[9px] uppercase text-white/20 mb-1">Humidity</div>
-                      <div className="text-xs font-bold text-white">82%</div>
+                <div className="p-4 bg-[#050B14] text-white border border-white/10 rounded-2xl min-w-[220px] shadow-2xl">
+                  <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
+                    <span className="text-[10px] font-black uppercase text-blue-400 tracking-widest">{point.location || "Ocean Node"}</span>
+                    <div className={`w-2 h-2 rounded-full ${isWarning ? 'bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.8)]' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'}`} />
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                       <div className="flex flex-col">
+                          <span className="text-[8px] uppercase text-white/30">Wave</span>
+                          <span className="text-xs font-bold text-white">{point.waveHeight?.toFixed(1) || "1.2"}m</span>
+                       </div>
+                       <div className="flex flex-col">
+                          <span className="text-[8px] uppercase text-white/30">Wind</span>
+                          <span className="text-xs font-bold text-emerald-400">{(point.windSpeed || 15.2).toFixed(1)}kn</span>
+                       </div>
                     </div>
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-center">
-                      <div className="text-[9px] uppercase text-white/20 mb-1">Pressure</div>
-                      <div className="text-xs font-bold text-white">1012hp</div>
+                    
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                       <div className="flex flex-col">
+                          <span className="text-[8px] uppercase text-white/30">Sea SST</span>
+                          <span className="text-xs font-bold text-rose-400">{(point.temp || 28.1).toFixed(1)}°C</span>
+                       </div>
+                       <div className="flex flex-col">
+                          <span className="text-[8px] uppercase text-white/30">Salinity</span>
+                          <span className="text-xs font-bold text-blue-400">{(point.salinity || 35.0).toFixed(1)}psu</span>
+                       </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between opacity-30">
+                      <span className="text-[8px] font-mono text-white">SYNC: SAT-ODS-LINK</span>
+                      <span className="text-[8px] font-mono text-white">{point.lat.toFixed(3)}, {point.lng.toFixed(3)}</span>
                     </div>
                   </div>
                 </div>

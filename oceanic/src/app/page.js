@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/Logo";
 
 export default function LandingPage() {
   const { user, loading, googleLogin, facebookLogin } = useAuth();
@@ -55,9 +56,8 @@ export default function LandingPage() {
       {/* Top Navigation */}
       <header className="relative z-50 flex items-center justify-between px-8 py-6 lg:px-12">
         <div className="flex items-center gap-12">
-          <Link href="/" className="flex items-center gap-2.5">
-            <Waves className="w-6 h-6 text-white" />
-            <span className="text-xl font-bold tracking-tight uppercase">Oceanic AI</span>
+          <Link href="/">
+            <Logo />
           </Link>
           
           <nav className="hidden lg:flex items-center gap-8 text-[11px] font-bold uppercase tracking-widest text-white/60">
@@ -203,14 +203,11 @@ export default function LandingPage() {
                  <video autoPlay muted loop playsInline preload="auto" className="w-full h-full object-cover opacity-60">
                    <source src="/space.mp4" type="video/mp4" />
                  </video>
-                 <div className="absolute inset-x-12 bottom-12 z-20">
-                    <div className="flex items-center gap-4 mb-6">
-                       <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                          <Waves className="text-white w-7 h-7" />
-                       </div>
-                       <span className="text-3xl font-black uppercase tracking-tighter text-white">Oceanic AI</span>
-                    </div>
-                    <div className="pt-8 border-t border-white/5">
+                  <div className="absolute inset-x-12 bottom-12 z-20">
+                     <div className="mb-6">
+                        <Logo />
+                     </div>
+                     <div className="pt-8 border-t border-white/5">
                        <p className="text-white/20 text-[9px] font-black uppercase tracking-widest">Secured Node Protocol // v8.4.2</p>
                     </div>
                  </div>

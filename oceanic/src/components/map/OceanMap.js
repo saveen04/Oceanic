@@ -4,115 +4,117 @@ import React, { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
 
-import { useMap } from "react-leaflet";
-
-// Dynamic imports for Leaflet components
-const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false });
-const Circle = dynamic(() => import("react-leaflet").then((mod) => mod.Circle), { ssr: false });
-const Polyline = dynamic(() => import("react-leaflet").then((mod) => mod.Polyline), { ssr: false });
-const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false });
-
-import { LayerPanel } from "./LayerPanel";
-import { TimelineControl } from "./TimelineControl";
-import { DynamicHeatmap } from "./DynamicHeatmap";
-import { WindParticles } from "./WindParticles";
-import { TelemetryLayer } from "./TelemetryLayer";
-import { VectorFieldLayer } from "./VectorFieldLayer";
-
-import { Layers, Maximize2, Navigation, Activity, ShieldAlert, Wind as WindIcon, AlertTriangle } from "lucide-react";
+import { useMap, useMapEvents } from "react-leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 
-const OceanMap = () => {
-  const { data: liveTelemetry } = useSWR("/api/incois/summary", fetcher);
-  const { data: datasetTelemetry } = useSWR("/api/telemetry", fetcher);
+import { 
+  Layers, 
+  Maximize2, 
+  Navigation, 
+  Activity, 
+  ShieldAlert, 
+  Wind as WindIcon, 
+  AlertTriangle, 
+  Search, 
+  Crosshair, 
+  ChevronLeft, 
+  ChevronRight, 
+  X,
+  Zap
+} from "lucide-react";
 
-  // Memoized Combined Telemetry (Live API + CSV Datasets)
-  const telemetry = useMemo(() => {
-    const live = liveTelemetry?.waves || [];
-    const dataset = datasetTelemetry?.data || [];
-    return {
-      waves: [...live, ...dataset]
-    };
-  }, [liveTelemetry, datasetTelemetry]);
+// ---------------- GIS Components ----------------
+import { GISControlCenter } from "./GISControlCenter";
+import { ContextIntelligence } from "./ContextIntelligence";
+import { CommandPalette } from "./CommandPalette";
+import { TimelineControl } from "./TimelineControl";
+import { MaritimeHeatmap } from "./MaritimeHeatmap";
+import { TelemetryLayer } from "./TelemetryLayer";
+import { WindParticles } from "./WindParticles";
+import { CurrentStreamlines } from "./CurrentStreamlines";
+import { VectorFieldLayer } from "./VectorFieldLayer";
+
+// Dynamic Tsunami Layer (Created in next step)
+const TsunamiLayer = dynamic(() => import("./TsunamiLayer").then(mod => mod.TsunamiLayer), { ssr: false });
+
+// ---------------- Dynamic Leaflet Core ----------------
+const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false });
+const Polyline = dynamic(() => import("react-leaflet").then((mod) => mod.Polyline), { ssr: false });
+
+const OceanMap = () => {
+  const { data: telemetryData } = useSWR("/api/incois/summary", fetcher, { refreshInterval: 30000 });
 
   const [mounted, setMounted] = useState(false);
-  // ... rest of state unchanged
-  const [showControls, setShowControls] = useState(true);
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [mapMode, setMapMode] = useState("satellite"); // Default to high-fidelity satellite
+  
   const [timelineIndex, setTimelineIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
 
-  // GIS Map Mode (satellite, normal)
-  const [mapMode, setMapMode] = useState("normal");
-
-  // 11 GIS Layers State
   const [layers, setLayers] = useState({
     wave: true,
-    swell: false,
+    wind: true,
+    current: true,
+    tsunami: true, // New Tsunami Layer
     sst: false,
-    current: false,
     salinity: false,
     cyclone: false,
-    wind: true,
-    humidity: false,
-    bathymetry: false,
-    shipping: false,
-    satellite: false,
+    swell: false,
+    shipping: false
   });
 
-  // Layer Config (Opacity, etc.)
-  const [layerConfig, setLayerConfig] = useState(
-    Object.keys(layers).reduce((acc, l) => ({ ...acc, [l]: { opacity: 0.6 } }), {})
-  );
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    let interval;
-    if (playing) {
-      interval = setInterval(() => {
-        setTimelineIndex((prev) => (prev + 1) % 24); // 24hr loop
-      }, 1000 / speed);
-    }
-    return () => clearInterval(interval);
-  }, [playing, speed]);
-
-  const [mapBounds, setMapBounds] = useState(null);
+  useEffect(() => { setMounted(true); }, []);
 
   const toggleLayer = (id) => {
-    setLayers((prev) => ({ ...prev, [id]: !prev[id] }));
+    setLayers(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const setLayerOpacity = (id, val) => {
-    setLayerConfig((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], opacity: val },
-    }));
-  };
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (document.activeElement.tagName === 'INPUT') return;
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(prev => !prev);
+      }
+      switch(e.key.toLowerCase()) {
+        case 'l': setLeftSidebarOpen(prev => !prev); break;
+        case 'f': {
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+          else document.exitFullscreen();
+          break;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
-  // Map events to track bounds for heatmaps
-  const MapEvents = () => {
-    const map = useMap();
-    useEffect(() => {
-      if (!mapBounds) setMapBounds(map.getBounds());
-      
-      const handleMove = () => {
-        setMapBounds(map.getBounds());
-      };
-      
-      map.on("moveend", handleMove);
-      return () => map.off("moveend", handleMove);
-    }, [map]);
+  const MapClickHandler = () => {
+    useMapEvents({
+      click: (e) => {
+        const latlng = e.latlng;
+        setSelectedLocation({
+          name: "Marine Intelligence Point",
+          lat: latlng.lat,
+          lng: latlng.lng,
+          telemetry: telemetryData?.waves?.[0] || {}
+        });
+        setRightSidebarOpen(true);
+      }
+    });
     return null;
   };
 
   if (!mounted) return (
-    <div className="w-full h-[700px] bg-[#0a1016] rounded-[40px] flex items-center justify-center border border-white/5">
+    <div className="w-full h-full bg-[#050B14] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <Activity className="w-12 h-12 text-blue-500 animate-pulse" />
         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 italic">Syncing Planet Grids...</span>
@@ -120,212 +122,140 @@ const OceanMap = () => {
     </div>
   );
 
-  const cyclonePath = [
-    [15.5, 88.2],
-    [16.8, 89.5],
-    [18.2, 90.1],
-    [19.5, 91.0],
-  ];
-
   return (
-    <div className="relative w-full h-[calc(100vh-180px)] rounded-2xl overflow-hidden border border-white/5 bg-[#0a1016] group flex flex-col shadow-2xl">
+    <div className="relative w-full h-[calc(100vh-100px)] overflow-hidden bg-[#050B14] flex flex-col shadow-2xl">
       
-      {/* Top Map Header */}
-      <div className="absolute top-8 left-8 z-[1000] flex items-center gap-4 pointer-events-none">
-        <button 
-          onClick={() => setShowControls(!showControls)}
-          className="p-4 glass-dark border border-white/10 rounded-2xl text-white hover:bg-blue-600 transition-all pointer-events-auto shadow-2xl"
-        >
-          <Layers className="w-5 h-5" />
-        </button>
-        <div className="glass-dark border border-white/10 rounded-2xl px-6 py-3 flex items-center gap-3 shadow-2xl pointer-events-auto">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Geo-Intelligence Active</span>
-        </div>
-      </div>
+      <CommandPalette 
+        isOpen={commandPaletteOpen} 
+        onClose={() => setCommandPaletteOpen(false)}
+      />
 
-      <div className="flex flex-1 relative overflow-hidden">
-        {/* Layer Controls Sidebar */}
+      <div className="flex-1 flex overflow-hidden relative">
+        
+        {/* Left Sidebar: Control Center (Dark/Glass) */}
         <AnimatePresence>
-          {showControls && (
+          {leftSidebarOpen && (
             <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              className="relative z-[1000]"
+              initial={{ x: -320 }}
+              animate={{ x: 0 }}
+              exit={{ x: -320 }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="z-[2000] relative border-r border-white/5 h-full bg-[#050B14]/80 backdrop-blur-2xl"
             >
-              <LayerPanel 
+              <GISControlCenter 
                 layers={layers} 
-                setLayer={toggleLayer} 
-                layerConfig={layerConfig}
-                setLayerOpacity={setLayerOpacity}
+                toggleLayer={toggleLayer} 
               />
+              
+              <button 
+                onClick={() => setLeftSidebarOpen(false)}
+                className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#050B14] border border-white/10 flex items-center justify-center text-white/40 hover:text-white z-[3000] shadow-xl backdrop-blur-xl"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
 
+        {!leftSidebarOpen && (
+          <button 
+            onClick={() => setLeftSidebarOpen(true)}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#050B14] border border-white/10 flex items-center justify-center text-white/40 hover:text-white z-[2000] shadow-xl backdrop-blur-xl"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+
         {/* Primary Map Engine */}
-        <div className="flex-1 relative bg-[#f8fafc]">
+        <div className="flex-1 relative bg-[#050B14] z-0">
           <MapContainer 
-            key={`${mapMode}-${mounted}`} // Force clean remount to fix 'reused instance' errors
-            center={[15, 0]} 
-            zoom={3} 
-            style={{ height: "100%", width: "100%", background: "#f8fafc" }}
-            className="z-0"
+            center={[15, 80]} 
+            zoom={5} 
+            style={{ height: "100%", width: "100%", background: "#050B14" }}
             zoomControl={false}
           >
-            <MapEvents />
+            <MapClickHandler />
             
-            {/* Dynamic Tile Layers based on Map Mode */}
-            {mapMode === "normal" && (
-              <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-              />
-            )}
-
-            {mapMode === "satellite" && (
-              <>
-                <TileLayer
-                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                />
-                <TileLayer
-                  url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
-                  opacity={0.8}
-                />
-              </>
-            )}
-            
-            {/* Global Result Heatmaps (SST, Salinity, Humidity) */}
-            {["sst", "salinity", "humidity"].map((layerId) => (
-              layers[layerId] && (
-                <DynamicHeatmap 
-                  key={layerId}
-                  type={layerId}
-                  visible={layers[layerId]}
-                  opacity={layerConfig[layerId].opacity}
-                  bounds={mapBounds}
-                  data={telemetry?.waves || [1]} 
-                />
-              )
-            ))}
-
-            {/* Specialized Wave & Swell Vector Layers */}
-            {layers.wave && (
-              <TelemetryLayer 
-                data={telemetry?.waves} 
-                type="wave" 
-                visible={layers.wave}
-                opacity={layerConfig.wave.opacity}
-              />
-            )}
-
-            {layers.swell && (
-              <VectorFieldLayer 
-                type="wave"
-                visible={layers.swell}
-                opacity={layerConfig.swell.opacity}
-              />
-            )}
-
-            {/* Windy.com Style Wind Particles */}
-            <WindParticles 
-              visible={layers.wind} 
-              data={telemetry?.waves}
-              speedMultiplier={speed * 0.5} 
-              opacity={layerConfig.wind.opacity}
+            <TileLayer
+              attribution='&copy; ESRI &copy; CARTO'
+              url={mapMode === "satellite" 
+                ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" 
+                : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              }
             />
 
-            {/* Ocean Current Vectors */}
-            {layers.current && (
-              <VectorFieldLayer 
-                type="current"
-                visible={layers.current}
-                opacity={layerConfig.current.opacity}
-              />
-            )}
+            {/* Core Intelligence Layers */}
+            {layers.sst && <MaritimeHeatmap type="sst" visible={layers.sst} data={telemetryData?.waves} />}
+            {layers.salinity && <MaritimeHeatmap type="salinity" visible={layers.salinity} data={telemetryData?.waves} />}
+            
+            {/* Dynamic Vector Layers */}
+            {layers.wind && <WindParticles visible={layers.wind} data={telemetryData?.waves} speedMultiplier={speed * 0.5} mapMode={mapMode} />}
+            {layers.current && <CurrentStreamlines visible={layers.current} data={telemetryData?.waves} speedMultiplier={0.8} mapMode={mapMode} />}
+            
+            {layers.swell && <VectorFieldLayer type="swell" visible={layers.swell} spacing={1.5} />}
 
-            {/* Cyclone Tracking & Prediction */}
+            {/* Tsunami Monitoring (New) */}
+            {layers.tsunami && <TsunamiLayer data={telemetryData?.tsunami} visible={layers.tsunami} />}
+
+            {/* Telemetry Hubs */}
+            <TelemetryLayer data={telemetryData?.waves} type="wave" visible={layers.wave} />
+
             {layers.cyclone && (
-              <>
-                <Polyline 
-                  positions={cyclonePath} 
-                  pathOptions={{ color: '#f43f5e', weight: 2, dashArray: '8, 8', lineCap: 'round' }}
-                />
-                {cyclonePath.map((pos, i) => (
-                  <Circle
-                    key={i}
-                    center={pos}
-                    radius={150000}
-                    pathOptions={{ 
-                      fillColor: i === cyclonePath.length - 1 ? '#f43f5e' : '#f43f5e', 
-                      fillOpacity: 0.1, 
-                      color: '#f43f5e',
-                      weight: 1
-                    }}
-                  >
-                    <Popup>
-                      <div className="p-3 bg-[#0a1016] text-white border border-white/10 rounded-xl">
-                        <div className="text-[10px] font-black uppercase text-rose-500 mb-1">Cyclone Vayu Prediction</div>
-                        <div className="text-xs font-bold">Node {i + 1} • T+{i*6}h</div>
-                      </div>
-                    </Popup>
-                  </Circle>
-                ))}
-              </>
-            )}
-
-            {/* Tsunami Propagation Simulation */}
-            {layers.tsunami && (
-              <Circle 
-                center={[0, 120]} 
-                radius={800000} 
-                pathOptions={{ color: '#fbbf24', fillColor: '#fbbf24', fillOpacity: 0.05, weight: 1, dashArray: '10, 10' }}
-              >
-                <div className="absolute inset-0 bg-amber-500 animate-ping opacity-20" />
-              </Circle>
+              <Polyline 
+                positions={[[10, 86], [12, 87], [15, 88.5], [17.5, 90], [20, 91.5]]} 
+                pathOptions={{ color: '#f43f5e', weight: 2, dashArray: '8, 8' }} 
+              />
             )}
           </MapContainer>
 
-          {/* Floating Map Actions */}
-          <div className="absolute top-8 right-8 z-[1000] flex flex-col gap-4">
-             {/* Map Mode Switcher */}
-             <div className="flex flex-col gap-2 p-2 glass-dark border border-white/10 rounded-3xl shadow-2xl">
-               {[
-                 { id: "normal", label: "Intelligence", icon: Navigation },
-                 { id: "satellite", label: "Satellite", icon: Layers }
-               ].map((mode) => (
-                 <button
-                   key={mode.id}
-                   onClick={() => setMapMode(mode.id)}
-                   className={`p-3 rounded-2xl transition-all flex items-center gap-3 group relative ${
-                     mapMode === mode.id ? "bg-blue-600 text-white" : "text-white/40 hover:bg-white/5 hover:text-white"
-                   }`}
-                 >
-                   <mode.icon className="w-4 h-4" />
-                   <span className="text-[10px] font-black uppercase tracking-widest hidden group-hover:block absolute right-full mr-4 bg-black/80 px-3 py-2 rounded-lg whitespace-nowrap">
-                     {mode.label} Mode
-                   </span>
-                 </button>
-               ))}
+          {/* Map Controls */}
+          <div className="absolute top-8 right-8 z-[1000] flex flex-col gap-3">
+             <div className="flex flex-col gap-2 p-2 bg-[#050B14]/80 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-2xl">
+                <button 
+                  onClick={() => setMapMode(prev => prev === "normal" ? "satellite" : "normal")}
+                  className={`p-3 rounded-xl transition-all ${mapMode === "satellite" ? "bg-blue-600 text-white" : "text-white/40 hover:bg-white/5"}`}
+                  title="Toggle Satellite"
+                >
+                   <Layers className="w-5 h-5" />
+                </button>
+                <div className="h-px bg-white/5 mx-2" />
+                <button 
+                  className="p-3 hover:bg-white/5 rounded-xl text-emerald-400/50 hover:text-emerald-400 transition-colors"
+                  title="Situational Reset"
+                  onClick={() => setMounted(false)}
+                >
+                   <Navigation className="w-5 h-5" />
+                </button>
              </div>
-
-             <button className="p-4 glass-dark border border-white/10 rounded-2xl text-white/50 hover:text-white transition-all shadow-2xl mt-4">
-               <Maximize2 className="w-5 h-5" />
-             </button>
           </div>
         </div>
+
+        {/* Context Intelligence: Right Sidebar (Dark/Glass) */}
+        <AnimatePresence>
+          {rightSidebarOpen && (
+            <ContextIntelligence 
+              visible={rightSidebarOpen}
+              selectedLocation={selectedLocation}
+              telemetry={telemetryData?.waves}
+              onClose={() => setRightSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
       </div>
 
-      {/* Cinematic Timeline Slider */}
-      <TimelineControl 
-        times={Array.from({length: 24}, (_, i) => `${i}:00 UTC`)}
-        index={timelineIndex}
-        setIndex={setTimelineIndex}
-        playing={playing}
-        setPlaying={setPlaying}
-        speed={speed}
-        setSpeed={setSpeed}
-      />
+      {/* Bottom Timeline Control */}
+      <div className="flex-none z-[1000] border-t border-white/5 bg-[#050B14]">
+          <TimelineControl 
+            times={Array.from({length: 24}, (_, i) => `${i}:00 UTC`)}
+            index={timelineIndex}
+            setIndex={setTimelineIndex}
+            playing={playing}
+            setPlaying={setPlaying}
+            speed={speed}
+            setSpeed={setSpeed}
+          />
+      </div>
     </div>
   );
 };

@@ -37,28 +37,40 @@ LOCATIONS = [
 ]
 
 def fetch_real_maritime_data(lat, lng):
-    """Fetches high-fidelity marine and atmospheric weather data for Indian coordinates."""
+    """Fetches high-fidelity marine, atmospheric, and tidal data."""
     try:
-        # 1. Marine API (Waves/Currents)
-        marine_url = f"https://marine-api.open-meteo.com/v1/marine?latitude={lat}&longitude={lng}&current=wave_height,wave_direction,wave_period,ocean_current_velocity,ocean_current_direction,sea_surface_temperature&timezone=Asia%2FSingapore"
+        # 1. Marine API (Waves/Currents/Salinity)
+        marine_url = f"https://marine-api.open-meteo.com/v1/marine?latitude={lat}&longitude={lng}&current=wave_height,wave_direction,wave_period,ocean_current_velocity,ocean_current_direction,sea_surface_temperature,sea_surface_salinity&timezone=Asia%2FSingapore"
         
         # 2. Weather API (Wind)
         weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=wind_speed_10m,wind_direction_10m&timezone=Asia%2FSingapore"
         
+        # 3. Tides API (Localized Tide Height)
+        tides_url = f"https://tides.open-meteo.com/v1/tides?latitude={lat}&longitude={lng}&current=tide_height"
+        
         marine_res = requests.get(marine_url, timeout=10).json()
         weather_res = requests.get(weather_url, timeout=10).json()
         
+        # Tides API might fail for deep sea points, handle gracefully
+        try:
+            tides_res = requests.get(tides_url, timeout=5).json()
+            tide_height = tides_res.get('current', {}).get('tide_height', 0.0)
+        except:
+            tide_height = 0.0
+            
         m_curr = marine_res.get('current', {})
         w_curr = weather_res.get('current', {})
         
         return {
-            "waveHeight": m_curr.get('wave_height', 0),
-            "waveDirection": m_curr.get('wave_direction', 0),
-            "temp": m_curr.get('sea_surface_temperature', 0),
-            "currentVelocity": m_curr.get('ocean_current_velocity', 0),
-            "currentDirection": m_curr.get('ocean_current_direction', 0),
-            "windSpeed": w_curr.get('wind_speed_10m', 0),
-            "windDirection": w_curr.get('wind_direction_10m', 0),
+            "waveHeight": m_curr.get('wave_height') or 0.0,
+            "waveDirection": m_curr.get('wave_direction') or 0,
+            "temp": m_curr.get('sea_surface_temperature') or 0.0,
+            "salinity": m_curr.get('sea_surface_salinity') or 35.0, # Default average ocean salinity
+            "currentVelocity": m_curr.get('ocean_current_velocity') or 0.0,
+            "currentDirection": m_curr.get('ocean_current_direction') or 0.0,
+            "tideLevel": tide_height or 0.0,
+            "windSpeed": w_curr.get('wind_speed_10m') or 0.0,
+            "windDirection": w_curr.get('wind_direction_10m') or 0,
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
     except Exception as e:
@@ -94,7 +106,8 @@ def sync_to_firestore(collection, doc_id, data):
         
         # In a real environment, you'd add: headers={"Authorization": f"Bearer {token}"}
         # Since we're in a local dev mode, we'll print the sync action
-        print(f"[{collection.upper()}] Syncing {doc_id} -> {data.get('waveHeight', 'N/A')}m / {data.get('temp', 'N/A')}C")
+        val = data.get('waveHeight') or data.get('tideLevel', 0)
+        print(f"[{collection.upper()}] Syncing {doc_id} -> {val}m / {data.get('salinity', 'N/A')}psu")
         
         # Mocking the actual network call to avoid Auth complexity in this specific sandbox step
         # res = requests.patch(url, json=payload)
@@ -121,17 +134,18 @@ def main_loop():
                 # Sync Wave Node
                 sync_to_firestore("waves", loc['name'].replace(" ", "_").lower(), real_data)
                 
-                # Dynamic Hazard Detection
-                if real_data['waveHeight'] > 3.0:
+                # Dynamic Hazard Detection (Coast Specific)
+                wave_height = real_data.get('waveHeight', 0)
+                if wave_height and wave_height > 3.0:
                     alert = {
                         "type": "high_waves",
                         "location": loc['name'],
-                        "severity": "high" if real_data['waveHeight'] < 5.0 else "critical",
-                        "waveHeight": real_data['waveHeight'],
+                        "severity": "high" if wave_height < 5.0 else "critical",
+                        "waveHeight": wave_height,
                         "timestamp": real_data['timestamp']
                     }
                     sync_to_firestore("disasters", f"alert_{int(time.time())}", alert)
-                    print(f"!!! HAZARD DETECTED: {loc['name']} is reporting {real_data['waveHeight']}m swells !!!")
+                    print(f"!!! HAZARD DETECTED: {loc['name']} is reporting {wave_height}m swells !!!")
 
         print("Sync cycle complete. Standby (60s)...")
         time.sleep(60)

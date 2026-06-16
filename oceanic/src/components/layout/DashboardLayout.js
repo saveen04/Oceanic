@@ -18,6 +18,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Logo } from "../Logo";
 
 export const DashboardLayout = ({ children }) => {
   const { user, loading, logout } = useAuth();
@@ -100,30 +101,47 @@ export const DashboardLayout = ({ children }) => {
 
         {/* Top Header */}
         <header className="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-[#0a1016]/80 backdrop-blur-3xl z-40 shrink-0">
-          <div className="flex items-center gap-8 flex-grow max-w-2xl">
+          <div className="flex items-center gap-8 flex-grow max-w-6xl">
+            <div className="flex items-center gap-4 border-r border-white/10 pr-8 mr-2 italic">
+              <Logo collapsed={true} />
+            </div>
             <div className="relative group flex-grow">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 group-focus-within:text-blue-500 transition-colors" />
               <input
                 type="text"
-                placeholder="Search marine intelligence Grids..."
-                className="w-full bg-white/5 border border-white/5 rounded-xl py-3 pl-12 pr-4 text-[11px] font-black uppercase tracking-widest text-white/60 focus:outline-none focus:border-blue-500/30 transition-all"
+                placeholder="Search marine intelligence (Grids, Vessels, Coastal Life)..."
+                className="w-full bg-white/5 border border-white/5 rounded-xl py-3.5 pl-12 pr-4 text-[11px] font-black uppercase tracking-widest text-white/60 focus:outline-none focus:border-blue-500/30 transition-all placeholder:text-white/20"
               />
             </div>
             
-            <button className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-500 transition-all shadow-lg active:scale-95 whitespace-nowrap">
-              <Plus className="w-4 h-4" />
-              New Workspace
-            </button>
+            {/* New Workspace removed for 2.0 declutter */}
           </div>
 
           <div className="flex items-center gap-6 ml-6">
-            <button className="p-2 text-white/30 hover:text-white transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-            </button>
-            <button className="p-2 text-white/30 hover:text-white transition-colors">
-              <HelpCircle size={20} />
-            </button>
+            <div className="relative group">
+              <button className="p-2 text-white/30 hover:text-white transition-colors relative">
+                <Bell size={20} />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+              </button>
+              
+              {/* Notification Tooltip */}
+              <div className="absolute top-full right-0 mt-4 w-64 glass-dark border border-white/10 rounded-2xl p-4 opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50">
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2">Live Alerts</p>
+                <p className="text-[10px] font-bold text-white/60">New Tsunami Detection Node active in Java Sea.</p>
+              </div>
+            </div>
+
+            <div className="relative group">
+              <button className="p-2 text-white/30 hover:text-white transition-colors">
+                <HelpCircle size={20} />
+              </button>
+              
+              {/* Help Tooltip */}
+              <div className="absolute top-full right-0 mt-4 w-64 glass-dark border border-white/10 rounded-2xl p-4 opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50">
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-2">Oceanic Help</p>
+                <p className="text-[10px] font-bold text-white/60">Use Ctrl+K to search all maritime intelligence Grids.</p>
+              </div>
+            </div>
             
             <div className="h-10 w-px bg-white/5 mx-2" />
             
@@ -133,15 +151,15 @@ export const DashboardLayout = ({ children }) => {
                 className="flex items-center gap-3 group cursor-pointer bg-white/5 px-4 py-2 rounded-xl border border-white/5 hover:border-white/10 transition-all"
               >
                 {user?.photoURL ? (
-                  <img src={user.photoURL} className="w-8 h-8 rounded-lg object-cover shadow-lg" alt="Profile" />
+                  <img src={user.photoURL} className="w-8 h-8 rounded-lg object-cover shadow-lg border border-blue-500/30" alt="Profile" />
                 ) : (
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-[10px] font-black shadow-lg">
-                    {user?.fullName?.[0] || user?.email?.[0]}
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-[10px] font-black shadow-lg border border-white/10">
+                    <User size={14} className="text-white" />
                   </div>
                 )}
                 <div className="flex flex-col items-start mr-2">
-                  <span className="text-[10px] font-bold text-white uppercase tracking-tighter leading-none">{user?.fullName || user?.displayName || "Agent"}</span>
-                  <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mt-0.5">Active</span>
+                  <span className="text-[11px] font-black text-white uppercase tracking-tight leading-none group-hover:text-blue-400 transition-colors">{user?.fullName || "Verified Agent"}</span>
+                  <span className="text-[9px] font-black text-blue-500/80 uppercase tracking-widest mt-1">Intelligence Officer</span>
                 </div>
                 <ChevronDown className={`w-4 h-4 text-white/30 group-hover:text-white transition-transform duration-300 ${profileOpen ? 'rotate-180' : ''}`} />
               </div>
@@ -157,12 +175,13 @@ export const DashboardLayout = ({ children }) => {
                   >
                     <div className="flex flex-col gap-4">
                       <div className="flex items-center gap-3 p-2">
-                        <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-sm font-black shadow-xl shadow-blue-900/40">
-                          {user?.fullName?.[0] || user?.email?.[0]}
+                        <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-sm font-black shadow-xl shadow-blue-900/40 border border-white/10">
+                          <User size={24} className="text-white" />
                         </div>
                         <div>
-                          <p className="text-xs font-black text-white uppercase tracking-tight">{user?.fullName || "Agent"}</p>
-                          <p className="text-[9px] text-white/40 truncate w-32">{user?.email}</p>
+                          <p className="text-sm font-black text-white uppercase tracking-tight">{user?.fullName || "Authorized Agent"}</p>
+                          <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Senior Intelligence Officer</p>
+                          <p className="text-[9px] text-white/40 truncate w-32 mt-1">{user?.email || "No email synchronized"}</p>
                         </div>
                       </div>
 

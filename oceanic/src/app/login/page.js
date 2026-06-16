@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Waves, ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,9 +59,12 @@ export default function LoginPage() {
       {/* Right Side: Form */}
       <div className="flex w-full flex-col justify-center bg-white px-8 py-16 lg:w-1/2 lg:px-24">
         <div className="mx-auto w-full max-w-sm">
-          <Link href="/" className="mb-12 inline-flex items-center gap-2 text-sm font-bold text-zinc-900 hover:text-black">
-            <ArrowLeft size={16} className="text-black" />
-            <span className="text-black">Back to home</span>
+          <Link href="/" className="mb-12 inline-flex items-center gap-4 group">
+            <Logo collapsed={true} />
+            <div className="flex items-center gap-2 text-sm font-bold text-zinc-900 group-hover:text-blue-600 transition-colors">
+              <ArrowLeft size={16} />
+              <span>Back to home</span>
+            </div>
           </Link>
           
           <div className="mb-10">

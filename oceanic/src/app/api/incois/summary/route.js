@@ -17,6 +17,10 @@ function mock() {
       { type: "high_waves", location: "Kochi", severity: "high", waveHeight: 2.9 },
       { type: "cyclone", location: "Bay of Bengal (Simulated)", severity: "critical", waveHeight: 6.5 }
     ],
+    tsunami: [
+      { id: "TS-01", location: "Sumatra Trench", lat: 2.3, lng: 92.5, severity: "warning", ETA: "45m", magnitude: 7.2 },
+      { id: "TS-02", location: "Nicobar Deep", lat: 7.1, lng: 93.8, severity: "alert", ETA: "120m", magnitude: 6.1 }
+    ]
   };
 }
 
@@ -26,6 +30,7 @@ export async function GET(request) {
     updatedAt: new Date().toISOString(),
     waves: [],
     alerts: [],
+    tsunami: [],
     sst: []
   };
 
@@ -53,6 +58,7 @@ export async function GET(request) {
       const mockData = mock();
       finalData.waves = mockData.waves;
       finalData.alerts = [...finalData.alerts, ...mockData.alerts];
+      finalData.tsunami = mockData.tsunami;
     }
 
   } catch (e) {

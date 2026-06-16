@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { 
   Search, 
@@ -36,18 +36,19 @@ export default function WeatherPage() {
   // Real-time Maritime Data
   const { data: marineData } = useSWR("/api/incois/summary", fetcher);
   
-  // Real-time Weather Data (Open-Meteo)
+  // Real-time Weather Data (OpenWeather via local API)
   const { data: weatherData, error: weatherError } = useSWR(
-    `https://api.open-meteo.com/v1/forecast?latitude=19.07&longitude=72.87&current_weather=true&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m`,
+    `/api/weather?q=${encodeURIComponent(city)}`,
     fetcher
   );
 
   const currentWeather = weatherData?.current_weather || {};
   const currentMarine = marineData?.waves?.find(w => w.location.includes(city)) || marineData?.waves?.[0] || {};
 
-  // Generate 7-day forecast from hourly data or fallback
+  // Extract forecast from OpenWeather raw data
   const forecastData = useMemo(() => {
-    if (!weatherData?.hourly?.temperature_2m) {
+    const list = weatherData?.raw?.forecast?.list;
+    if (!list || !Array.isArray(list)) {
       return [
         { day: "Mon", temp: 28, condition: "Clear" },
         { day: "Tue", temp: 26, condition: "Cloudy" },
@@ -59,13 +60,28 @@ export default function WeatherPage() {
       ];
     }
     
-    // Map hourly data to a daily summary (simplified for UI)
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    return days.map((day, i) => ({
-      day,
-      temp: Math.round(weatherData.hourly.temperature_2m[i * 24] || 25),
-      condition: i % 3 === 0 ? "Sunny" : i % 2 === 0 ? "Cloudy" : "Clear"
-    }));
+    // Group into daily summaries (taking one point per day around noon)
+    const days = [];
+    const seenDays = new Set();
+    
+    list.forEach(item => {
+      const date = new Date(item.dt * 1000);
+      const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+      const hour = date.getHours();
+      
+      if (!seenDays.has(dayName) && hour >= 10 && hour <= 14) {
+        seenDays.add(dayName);
+        days.push({
+          day: dayName,
+          temp: Math.round(item.main.temp),
+          condition: item.weather[0].main === "Clear" ? "Sunny" : 
+                     item.weather[0].main === "Clouds" ? "Cloudy" : 
+                     item.weather[0].main === "Rain" ? "Rainy" : "Clear"
+        });
+      }
+    });
+
+    return days.slice(0, 7);
   }, [weatherData]);
 
   return (
@@ -119,21 +135,25 @@ export default function WeatherPage() {
 
               <div className="flex flex-col md:flex-row md:items-end gap-8 mb-12">
                 <div className="flex items-start gap-4">
-                  <h2 className="text-8xl font-black text-white tracking-tighter">{currentWeather.temperature ? Math.round(currentWeather.temperature) : "--"}°</h2>
+                  <h2 className="text-8xl font-black text-white tracking-tighter">
+                    {weatherData?.temperature !== undefined ? Math.round(weatherData.temperature) : "--"}°
+                  </h2>
                   <div className="pt-2 text-slate-400 font-bold uppercase tracking-widest text-sm">Celsius</div>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-3xl font-bold text-white mb-1">{city} Intelligence Zone</span>
-                  <span className="text-slate-400 font-medium">Wind {currentWeather.windspeed || "--"} km/h • Direction {currentWeather.winddirection || "--"}°</span>
+                  <span className="text-3xl font-bold text-white mb-1">{city} Environment</span>
+                  <span className="text-slate-400 font-medium">
+                    Wind {weatherData?.wind || "--"} m/s • Humidity {weatherData?.humidity || "--"}%
+                  </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {[
-                  { label: "Wind Speed", value: `${currentWeather.windspeed || "--"} km/h`, icon: Wind, color: "ocean" },
-                  { label: "Satellite Sync", value: "Verified", icon: Eye, color: "amber" },
-                  { label: "Wind Gusts", value: `${(currentWeather.windspeed * 1.2 || 0).toFixed(1)} km/h`, icon: Wind, color: "rose" },
-                  { label: "Temperature", value: `${currentWeather.temperature || "--"} °C`, icon: Thermometer, color: "indigo" },
+                  { label: "Wind Speed", value: `${weatherData?.wind || "--"} m/s`, icon: Wind, color: "ocean" },
+                  { label: "Pressure", value: `${weatherData?.pressure || "--"} hPa`, icon: Activity, color: "amber" },
+                  { label: "Humidity", value: `${weatherData?.humidity || "--"}%`, icon: Droplets, color: "rose" },
+                  { label: "Visibility", value: `${((weatherData?.visibility || 0) / 1000).toFixed(1)} km`, icon: Eye, color: "indigo" },
                 ].map((item, i) => (
                   <div key={i} className="flex flex-col p-4 bg-white/5 rounded-2xl border border-white/5">
                     <item.icon className={`w-5 h-5 text-${item.color}-400 mb-3`} />

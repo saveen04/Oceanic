@@ -28,15 +28,26 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         // Fetch additional user data from Firestore with error handling
         try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
+          const userDocRef = doc(db, "users", user.uid);
+          const userDoc = await getDoc(userDocRef);
+          
           if (userDoc.exists()) {
             setUser({ ...user, ...userDoc.data() });
           } else {
-            setUser(user);
+            // Handle social login: Create doc if it doesn't exist
+            const newUserData = {
+              uid: user.uid,
+              email: user.email,
+              fullName: user.displayName || "Agent Alpha",
+              role: "User",
+              createdAt: new Date().toISOString(),
+            };
+            await setDoc(userDocRef, newUserData);
+            setUser({ ...user, ...newUserData });
           }
         } catch (error) {
-          console.warn("AuthContext: Profile fetch failed (likely offline/network):", error.message);
-          setUser(user); // Fallback to basic Firebase user object
+          console.warn("AuthContext: Profile sync failed:", error.message);
+          setUser(user);
         }
       } else {
         setUser(null);
